@@ -239,6 +239,10 @@ body{
 }
 .insp .id{font-family:'UbuntuMonoX',monospace;font-size:10.5px;color:var(--ink-3);word-break:break-all}
 .insp .strip{height:3px;margin:11px 0 12px}
+/* out to the official guide's page for this topic; an anchor rather than a
+   button because it is a link, and it should behave like one */
+.insp .guide{display:inline-flex;gap:6px;align-items:center;margin:0 0 13px;text-decoration:none}
+.insp .guide .arr{font-size:12px;letter-spacing:0;opacity:.75}
 .strip.b0{background:var(--b0)}.strip.b1{background:var(--b1)}.strip.b2{background:var(--b2)}
 .strip.b3{background:var(--b3)}.strip.b4{background:var(--b4)}.strip.b5{background:var(--b5)}
 .strip.bx{background:var(--bx)}
@@ -830,6 +834,7 @@ function paint(){
 const detail = document.getElementById('detail');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const chip = i => `<button class="chip" data-go="${i}"><span class="dot ${BR(i)}"></span>${esc(D.name[i])}</button>`;
+const GUIDE = 'https://betaguide.wz2100.net/research.html?details_id=';
 
 /* the hints name the gesture the reader actually has to hand */
 const coarse = matchMedia('(pointer:coarse)');
@@ -853,6 +858,8 @@ function renderDetail(i){
     <h2>${esc(D.name[i])}</h2>
     <div class="id">${esc(D.id[i])}</div>
     <div class="strip ${BR(i)}"></div>
+    <a class="btn guide" href="${GUIDE}${encodeURIComponent(D.id[i])}" target="_blank" rel="noopener"
+       title="Open ${esc(D.name[i])} in the WZ2100 guide">Open in guide <span class="arr">&#8599;</span></a>
     <div class="sect"><h3>Requires <span>${reqs.length}</span></h3>
       <div class="chips">${reqs.length ? reqs.map(chip).join('') : '<span class="id">Available from turn one</span>'}</div></div>
     <div class="sect"><h3>Unlocks <span>${unl.length}</span></h3>
