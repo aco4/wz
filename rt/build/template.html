@@ -1,0 +1,842 @@
+<title>Warzone 2100 Research Tree</title>
+<style>
+@font-face{font-family:'UbuntuCond';src:url(data:font/woff2;base64,{{UBC}}) format('woff2');font-weight:400;font-style:normal;font-display:block}
+@font-face{font-family:'LatoX';src:url(data:font/woff2;base64,{{LATO}}) format('woff2');font-weight:400;font-style:normal;font-display:block}
+@font-face{font-family:'LatoX';src:url(data:font/woff2;base64,{{LATOB}}) format('woff2');font-weight:700;font-style:normal;font-display:block}
+@font-face{font-family:'UbuntuMonoX';src:url(data:font/woff2;base64,{{UMONO}}) format('woff2');font-weight:400;font-style:normal;font-display:block}
+
+/* ── tokens ─────────────────────────────────────────────────────────────
+   light is the bare :root set; the dark set is redefined twice so both the
+   OS setting and an explicit theme stamp resolve the same way.            */
+:root{
+  color-scheme:light;
+  --ground:#EDEEE9;      --plot-bg:#F4F5F1;    --panel:#FBFBF8;
+  --line:#D3D5CB;        --line-2:#E2E3DC;     --rule:#C6C9BC;
+  --ink:#171814;         --ink-2:#585A50;      --ink-3:#83867A;
+  --ord:#C24400;
+  /* branch ramp: one slot per branch of the prerequisite tree, plus the
+     uncoloured remainder --bx. Re-measured 2026-08-16 with CIEDE2000 against
+     Vienot dichromat simulation (checked against the colour-science library on
+     Sharma's reference pairs): the six hues hold worst-CVD dE 9.6 and
+     worst-normal 22.9 on this surface.
+
+     --bx does not chase separation, it stays neutral and recedes -- so it is
+     placed by LIGHTNESS instead, which is the one channel every dichromat
+     keeps. The branch hues occupy L 36-55 here, so the remainder sits at L 71,
+     clear of all of them (worst dE 12.4) while staying quieter than any of
+     them. It used to be #83867A at L 55, inside the branch band and dE 1.7
+     from --b4 under deuteranopia, i.e. the same colour. */
+  --b0:#BC2044;  --b1:#156394;  --b2:#2E6115;
+  --b3:#AD721D;  --b4:#279573;  --b5:#8860EB;  --bx:#ADAFA3;
+  --web:#8A6A55;         --sel:#111310;        --sel-ink:#F6F6F2;
+  --shadow:0 1px 2px rgba(20,22,16,.07),0 8px 26px rgba(20,22,16,.09);
+  --edge-op:.40;         --web-op:.15;
+  /* which glyph the theme button shows: the surface you would switch TO */
+  --show-sun:none;       --show-moon:block;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0B0C09;    --plot-bg:#0D0F0B;    --panel:#14170F;
+    --line:#2A2E23;      --line-2:#1E2219;     --rule:#343930;
+    --ink:#E9E7DC;       --ink-2:#A2A597;      --ink-3:#71756A;
+    --ord:#ED5400;
+    --b0:#D23855;  --b1:#1D699A;  --b2:#377418;
+    --b3:#C48227;  --b4:#31A983;  --b5:#9877F7;  --bx:#3A3D33;
+    --web:#C9A88E;       --sel:#F2F0E6;        --sel-ink:#0B0C09;
+    --shadow:0 1px 0 rgba(255,255,255,.03),0 16px 40px rgba(0,0,0,.5);
+    --edge-op:.42;       --web-op:.17;
+    --show-sun:block;    --show-moon:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0B0C09;      --plot-bg:#0D0F0B;    --panel:#14170F;
+  --line:#2A2E23;        --line-2:#1E2219;     --rule:#343930;
+  --ink:#E9E7DC;         --ink-2:#A2A597;      --ink-3:#71756A;
+  --ord:#ED5400;
+  /* same six hues re-stepped for the dark surface (not an automatic flip):
+     worst CVD dE 8.6, worst normal-vision dE 23.9. Branch hues occupy L 42-62,
+     so the remainder goes below them at L 25 rather than above (worst dE 12.0);
+     on this surface darker is the recessive direction. */
+  --b0:#D23855;  --b1:#1D699A;  --b2:#377418;
+  --b3:#C48227;  --b4:#31A983;  --b5:#9877F7;  --bx:#3A3D33;
+  --web:#C9A88E;         --sel:#F2F0E6;        --sel-ink:#0B0C09;
+  --shadow:0 1px 0 rgba(255,255,255,.03),0 16px 40px rgba(0,0,0,.5);
+  --edge-op:.42;         --web-op:.17;
+  --show-sun:block;      --show-moon:none;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:'LatoX',system-ui,sans-serif;font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.eyebrow{
+  font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;
+  letter-spacing:.14em;font-size:11px;color:var(--ink-3);
+}
+:focus-visible{outline:2px solid var(--ord);outline-offset:2px}
+
+.app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── top rail ───────────────────────────────────────────────────────── */
+.rail{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:10px 16px;border-bottom:1px solid var(--line);
+  background:var(--panel);position:relative;z-index:5;
+}
+.mark{display:flex;align-items:baseline;gap:10px;margin-right:auto;min-width:0}
+.mark h1{
+  font-family:'UbuntuCond',system-ui,sans-serif;font-weight:400;
+  text-transform:uppercase;letter-spacing:.19em;font-size:17px;margin:0;white-space:nowrap;
+}
+.mark h1 b{font-weight:400;color:var(--ord)}
+
+/* which side of a topic the plot lights up. Lives in the rail, not the detail
+   panel, because it governs hover as much as it governs a pinned topic. */
+.scope{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto}
+.scope .rl{
+  font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;
+  letter-spacing:.1em;font-size:11px;color:var(--ink-2);white-space:nowrap;
+}
+.seg{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;background:var(--ground)}
+.seg button{
+  font:inherit;font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;
+  letter-spacing:.1em;font-size:11px;line-height:1.4;padding:5px 10px;
+  border:0;border-left:1px solid var(--line);background:transparent;color:var(--ink-3);
+  cursor:pointer;white-space:nowrap;
+}
+.seg button:first-child{border-left:0}
+.seg button:hover{color:var(--ink);background:var(--line-2)}
+.seg button[aria-pressed="true"]{
+  color:var(--ink);background:var(--line-2);box-shadow:inset 0 -2px 0 var(--ord);
+}
+.seg button:focus-visible{outline:2px solid var(--ord);outline-offset:-2px}
+
+.thm{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  width:28px;height:28px;padding:0;border:1px solid var(--line);border-radius:2px;
+  background:var(--ground);color:var(--ink-2);cursor:pointer;
+}
+.thm:hover{color:var(--ink);background:var(--line-2)}
+.thm:focus-visible{outline:2px solid var(--ord);outline-offset:2px}
+.thm svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.thm .sun{display:var(--show-sun)}
+.thm .moon{display:var(--show-moon)}
+
+.finder{position:relative}
+.finder input{
+  font:inherit;font-size:13px;width:190px;padding:6px 9px;border:1px solid var(--line);
+  border-radius:2px;background:var(--ground);color:var(--ink);
+}
+.finder input::placeholder{color:var(--ink-3)}
+.results{
+  position:absolute;top:calc(100% + 6px);right:0;width:320px;max-height:min(58vh,460px);
+  overflow-y:auto;background:var(--panel);border:1px solid var(--line);
+  box-shadow:var(--shadow);border-radius:2px;padding:4px;margin:0;list-style:none;display:none;z-index:20;
+}
+.results.open{display:block}
+.results li{display:block}
+.results .grp{
+  font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;letter-spacing:.13em;
+  font-size:10px;color:var(--ink-3);padding:9px 8px 3px;border-top:1px solid var(--line-2);
+}
+.results li:first-child .grp{border-top:0}
+.results button{
+  display:flex;width:100%;gap:8px;align-items:baseline;text-align:left;font:inherit;
+  padding:5px 8px;border:0;background:transparent;color:var(--ink);cursor:pointer;border-radius:2px;
+}
+.results button:hover,.results button.cur{background:var(--line-2)}
+.dot{width:8px;height:8px;flex:0 0 auto;align-self:center;display:inline-block;border-radius:50%}
+.b0{background:var(--b0)}.b1{background:var(--b1)}.b2{background:var(--b2)}
+.b3{background:var(--b3)}.b4{background:var(--b4)}.b5{background:var(--b5)}.bx{background:var(--bx)}
+
+.btn{
+  font:inherit;font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;
+  letter-spacing:.1em;font-size:11px;padding:6px 11px;border:1px solid var(--line);
+  border-radius:2px;background:var(--ground);color:var(--ink-2);cursor:pointer;white-space:nowrap;
+}
+.btn:hover{color:var(--ink);border-color:var(--rule)}
+
+/* ── stage ──────────────────────────────────────────────────────────── */
+.stage{position:relative;flex:1;min-height:0;background:var(--plot-bg);overflow:hidden}
+#plot{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+#plot.drag{cursor:grabbing}
+
+.ring{fill:none;stroke:var(--rule);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.55}
+.ring.major{stroke-dasharray:none;opacity:.8}
+.ring.minor{stroke-dasharray:2 6}
+#frame{transition:opacity .2s}
+#frame.hide{opacity:0}
+
+.link{fill:none;stroke-width:1.1;vector-effect:non-scaling-stroke;stroke-opacity:var(--edge-op)}
+.link.b0{stroke:var(--b0)}.link.b1{stroke:var(--b1)}.link.b2{stroke:var(--b2)}
+.link.b3{stroke:var(--b3)}.link.b4{stroke:var(--b4)}.link.b5{stroke:var(--b5)}.link.bx{stroke:var(--bx)}
+.web{fill:none;stroke:var(--web);stroke-width:.9;vector-effect:non-scaling-stroke;stroke-opacity:var(--web-op)}
+
+.node{stroke:var(--plot-bg);stroke-width:1.4;vector-effect:non-scaling-stroke}
+.node.b0{fill:var(--b0)}.node.b1{fill:var(--b1)}.node.b2{fill:var(--b2)}
+.node.b3{fill:var(--b3)}.node.b4{fill:var(--b4)}.node.b5{fill:var(--b5)}.node.bx{fill:var(--bx)}
+#edges,#nodes{transition:opacity .18s}
+
+/* focus / filter states */
+.stage.focus .link,.stage.focus .web{stroke-opacity:.07}
+.stage.focus .node{opacity:.13}
+.stage.focus .lit{opacity:1}
+.stage.focus .link.lit,.stage.focus .web.lit{stroke-opacity:.95;stroke-width:1.9}
+.stage.focus .web.lit{stroke:var(--sel);stroke-width:1.5;stroke-opacity:.85}
+.node.pinned{stroke:var(--sel);stroke-width:2.4}
+.halo{fill:none;stroke:var(--sel);stroke-width:1.2;vector-effect:non-scaling-stroke;opacity:0}
+.halo.on{opacity:.9}
+#sweep{opacity:0}
+#sweepg .sw0,#sweepg .sw1{stop-color:var(--ord)}
+
+/* screen-space labels over the plot */
+.tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{
+  position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:'UbuntuCond',sans-serif;font-size:11px;letter-spacing:.05em;
+  color:var(--ink-2);text-shadow:0 0 4px var(--plot-bg),0 0 8px var(--plot-bg);
+}
+.tag.root{color:var(--ink);font-size:12px;letter-spacing:.02em}
+.tag.zt{font-size:11px;color:var(--ink-3)}
+.tag.zt.hot{color:var(--ink)}
+/* the pinned topic keeps its name on the plot at any zoom */
+.tag.pin{color:var(--ink)}
+
+/* cursor readout */
+.readout{
+  position:absolute;pointer-events:none;z-index:6;background:var(--panel);
+  border:1px solid var(--line);box-shadow:var(--shadow);padding:7px 10px;border-radius:2px;
+  max-width:250px;display:none;
+}
+.readout.on{display:block}
+.readout .nm{font-weight:700;font-size:13px;line-height:1.25}
+.readout .mt{font-size:11px;color:var(--ink-3);margin-top:2px}
+
+/* ── panels ─────────────────────────────────────────────────────────── */
+.panel{
+  position:absolute;background:var(--panel);border:1px solid var(--line);
+  box-shadow:var(--shadow);border-radius:2px;z-index:4;
+}
+
+/* Height follows the content: a topic with two prerequisites gets a short
+   panel. Only the ones that outgrow the stage cap out and scroll. */
+.insp{right:14px;top:14px;width:302px;max-height:calc(100% - 28px);
+  display:flex;flex-direction:column;overflow:hidden}
+.insp .body{overflow-y:auto;padding:14px;min-height:0}
+.insp h2{
+  font-family:'UbuntuCond',sans-serif;font-weight:400;font-size:21px;line-height:1.12;
+  margin:4px 0 2px;text-wrap:balance;letter-spacing:.005em;
+}
+.insp .id{font-family:'UbuntuMonoX',monospace;font-size:10.5px;color:var(--ink-3);word-break:break-all}
+.insp .strip{height:3px;margin:11px 0 12px}
+.strip.b0{background:var(--b0)}.strip.b1{background:var(--b1)}.strip.b2{background:var(--b2)}
+.strip.b3{background:var(--b3)}.strip.b4{background:var(--b4)}.strip.b5{background:var(--b5)}
+.strip.bx{background:var(--bx)}
+.sect{margin:0 0 13px}
+.sect h3{font:inherit;font-family:'UbuntuCond',sans-serif;text-transform:uppercase;letter-spacing:.13em;
+  font-size:10px;color:var(--ink-3);margin:0 0 6px;display:flex;gap:6px;align-items:baseline}
+.sect h3 span{color:var(--ink-3);opacity:.7}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{
+  font:inherit;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:2px;
+  background:transparent;color:var(--ink-2);cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+}
+.chip:hover{color:var(--ink);border-color:var(--rule);background:var(--line-2)}
+.chain{display:flex;flex-direction:column;gap:0;margin:0;padding:0;list-style:none}
+.chain li{display:flex;gap:8px;align-items:baseline;font-size:12px;padding:2px 0;color:var(--ink-2)}
+.chain li button{font:inherit;font-size:12px;border:0;background:transparent;color:inherit;padding:0;cursor:pointer;text-align:left}
+.chain li button:hover{color:var(--ink);text-decoration:underline}
+.chain li.here{color:var(--ink);font-weight:700}
+.chain li::before{content:"";width:5px;height:5px;flex:0 0 auto;background:var(--rule);border-radius:50%;transform:translateY(-2px)}
+.hints{list-style:none;margin:0;padding:0;font-size:11.5px;color:var(--ink-3);display:grid;gap:5px}
+
+.zoomer{position:absolute;left:14px;top:14px;z-index:4;display:flex;flex-direction:column;gap:6px}
+.zoomer .btn{width:30px;height:28px;padding:0;font-size:14px;line-height:1;background:var(--panel)}
+
+/* the rail drops its decoration before it lets the controls wrap onto a second
+   row, which would cost the plot the height */
+@media (max-width:1240px){
+}
+@media (max-width:1080px){
+  .insp{width:270px}
+  .scope .rl{display:none}                    /* the group keeps its aria label */
+}
+@media (max-width:820px){
+  .rail{gap:8px;padding:8px 10px;overflow:hidden}
+  .mark{margin-right:0;flex:1 1 100%}
+  .mark h1{font-size:15px;letter-spacing:.15em}
+  .btn{padding:5px 8px}
+  .seg button{font-size:10px;padding:5px 7px}
+  .finder{flex:1 1 96px;min-width:0}
+  .finder input{width:100%}
+  .results{width:min(320px,88vw)}
+  .insp{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:38vh}
+  .insp .body{padding:12px}
+  .zoomer{left:8px;top:8px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:0s!important;transition-duration:0s!important}
+}
+</style>
+
+<script>
+/* stamp the stored theme before first paint, so a chosen theme never flashes
+   the OS one; no choice stored means no stamp, i.e. follow the OS. */
+try{ var t = localStorage.getItem('rw-theme');
+     if(t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; }catch(e){}
+</script>
+
+<div class="app">
+  <header class="rail">
+    <div class="mark">
+      <h1>Warzone 2100 Research <b>Tree</b></h1>
+    </div>
+
+    <div class="scope">
+      <span class="rl" id="scopelab">Light up</span>
+      <div class="seg" id="scope" role="group" aria-labelledby="scopelab">
+        <button type="button" data-scope="req" aria-pressed="true"
+                title="Light up what a topic needs">Requires</button>
+        <button type="button" data-scope="unl" aria-pressed="false"
+                title="Light up what a topic leads to">Unlocks</button>
+        <button type="button" data-scope="both" aria-pressed="false"
+                title="Light up both sides of a topic">Both</button>
+      </div>
+    </div>
+
+    <button class="thm" id="thm" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 14.5A8.2 8.2 0 0 1 9.5 4 8.2 8.2 0 1 0 20 14.5Z"/>
+      </svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.2"/>
+        <path d="M12 2.6v2.2M12 19.2v2.2M4.3 4.3l1.6 1.6M18.1 18.1l1.6 1.6M2.6 12h2.2M19.2 12h2.2M4.3 19.7l1.6-1.6M18.1 5.9l1.6-1.6"/>
+      </svg>
+    </button>
+
+    <div class="finder">
+      <input id="q" type="search" placeholder="Find a technology" autocomplete="off"
+             role="combobox" aria-expanded="false" aria-controls="results" aria-label="Find a technology">
+      <ul class="results" id="results" role="listbox" aria-label="Technologies"></ul>
+    </div>
+
+  </header>
+
+  <div class="stage" id="stage">
+    <svg id="plot" role="img" aria-label="Radial graph of all 390 Warzone 2100 research topics. Distance from the centre is how far along the prerequisite chain a topic sits: the six starting topics are at the middle, the endgame is at the rim. Each line of research runs outwards from the centre as a spoke, and colour marks which branch of the prerequisite tree a topic belongs to."></svg>
+    <div class="tags" id="tags"></div>
+    <div class="readout" id="readout" aria-hidden="true"></div>
+
+    <div class="zoomer">
+      <button class="btn" id="zin" type="button" aria-label="Zoom in">+</button>
+      <button class="btn" id="zout" type="button" aria-label="Zoom out">&minus;</button>
+      <button class="btn" id="reset" type="button" aria-label="Reset view" title="Reset view">&#8635;</button>
+    </div>
+
+
+    <aside class="panel insp" aria-label="Technology detail">
+      <div class="body" id="detail"></div>
+    </aside>
+  </div>
+</div>
+
+<script id="techdata" type="application/json">{{DATA}}</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById('techdata').textContent);
+const N = D.id.length;
+const R = 520;                                  // unit circle -> user units
+/* branch names and colours are read off the layout, not declared here */
+const KINDLABEL = ['Turret or body','Structure','Stat upgrade'];
+const BR = i => D.br[i] < 0 ? 'bx' : 'b' + D.br[i];      // colour slot -> class
+const NS = 'http://www.w3.org/2000/svg';
+const fmt = n => n.toLocaleString('en-US');
+
+/* ── derived graph ─────────────────────────────────────────────────── */
+const kids = Array.from({length:N}, () => []);
+D.req.forEach((rs,i) => rs.forEach(r => kids[r].push(i)));
+// the prerequisite that actually gates a topic: the one finishing last
+const gate = D.req.map(rs => rs.length ? rs.reduce((a,b) => D.t[a] >= D.t[b] ? a : b) : -1);
+const maxCost = Math.max(...D.cost);
+
+const upstream = i => { const s=new Set(),st=[i]; while(st.length){const x=st.pop();
+  for(const r of D.req[x]) if(!s.has(r)){s.add(r);st.push(r);} } return s; };
+const downstream = i => { const s=new Set(),st=[i]; while(st.length){const x=st.pop();
+  for(const c of kids[x]) if(!s.has(c)){s.add(c);st.push(c);} } return s; };
+const critical = i => { const p=[i]; let x=i; while(gate[x]>=0){x=gate[x];p.unshift(x);} return p; };
+
+/* ── geometry ──────────────────────────────────────────────────────── */
+/* the layout ships one radius per node: progression by research cost */
+const rOf = i => D.rad[i] * R;
+const aOf = i => (D.ang[i] - 90) * Math.PI/180;
+const px = (r,a) => [r*Math.cos(a), r*Math.sin(a)];
+const RAD = Float64Array.from({length:N}, (_,i) => rOf(i));
+const XY = i => px(RAD[i], aOf(i));
+
+function spinePath(p,c){
+  const a1=aOf(p), a2=aOf(c), r1=RAD[p], r2=RAD[c], dr=r2-r1;
+  const [x1,y1]=px(r1,a1), [x2,y2]=px(r2,a2);
+  const [c1x,c1y]=px(r1+dr*0.42, a1), [c2x,c2y]=px(r1+dr*0.62, a2);
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)}C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+}
+function webPath(p,c){
+  const a1=aOf(p), a2=aOf(c), r1=RAD[p], r2=RAD[c];
+  let da=Math.abs(((a2-a1)+Math.PI)%(2*Math.PI)-Math.PI);
+  const k=0.72-0.42*Math.min(da/Math.PI,1);     // wide spans dive deeper inward
+  const [x1,y1]=px(r1,a1), [x2,y2]=px(r2,a2);
+  const [c1x,c1y]=px(r1*k,a1), [c2x,c2y]=px(r2*k,a2);
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)}C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
+}
+const sizeOf = i => 2.1 + 4.4*Math.sqrt(D.cost[i]/maxCost);
+
+/* ── build the plot ────────────────────────────────────────────────── */
+const svg = document.getElementById('plot');
+const stage = document.getElementById('stage');
+const mk = (t,at={}) => { const e=document.createElementNS(NS,t);
+  for(const k in at) e.setAttribute(k,at[k]); return e; };
+
+const view = mk('g',{id:'view'});
+const gFrame = mk('g',{id:'frame'});
+const gEdge  = mk('g',{id:'edges'});
+const gNode  = mk('g',{id:'nodes'});
+const gHalo  = mk('g',{id:'halos'});
+view.append(gFrame,gEdge,gNode,gHalo);
+
+const defs = mk('defs');
+const grad = mk('radialGradient',{id:'sweepg'});
+grad.append(mk('stop',{class:'sw0',offset:'0%','stop-opacity':'0'}),
+            mk('stop',{class:'sw1',offset:'100%','stop-opacity':'.5'}));
+defs.append(grad);
+const sweep = mk('path',{id:'sweep',fill:'url(#sweepg)'});
+svg.append(defs,view,sweep);
+
+/* cost bands for the finder's grouping -- not drawn, see bandOf() */
+const ringVals = {
+  cost:[{v:10000,l:'10k'},{v:25000,l:'25k'},{v:50000,l:'50k'},{v:100000,l:'100k'},
+        {v:160000,l:'160k'},{v:220510,l:'220k pts'}]
+};
+/* guide circles. Deliberately unlabelled: the radial scale is a quantile of
+   progression, so no ring carries a single honest number. */
+const ringEls = D.rings.map((r,ix) => {
+  const c = mk('circle',{class:'ring '+(ix%2?'minor':'major'),cx:0,cy:0,r:r*R});
+  gFrame.append(c); return c;
+});
+
+/* edges */
+const edges = [];
+for(let c=0;c<N;c++) for(const p of D.req[c]){
+  const spine = p === D.par[c];
+  const el = mk('path',{class: spine ? 'link ' + BR(c) : 'web',
+                        d: spine ? spinePath(p,c) : webPath(p,c)});
+  gEdge.append(el); edges.push({p,c,spine,el});
+}
+
+/* nodes */
+const nodes = [];
+for(let i=0;i<N;i++){
+  const el = mk('circle',{r:sizeOf(i)});
+  el.setAttribute('class','node ' + BR(i));
+  gNode.append(el); nodes.push(el);
+}
+const halo = mk('circle',{class:'halo',r:14});
+gHalo.append(halo);
+
+let nodeScale = 1;
+function placeNodes(){
+  const sc = nodeScale === 1 ? '' : ` scale(${nodeScale.toFixed(3)})`;
+  for(let i=0;i<N;i++){
+    const [x,y] = XY(i);
+    nodes[i].setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)})`+sc);
+  }
+}
+function updateNodeScale(){
+  const f = cam.k / fitScale();
+  const s = f <= 1 ? 1 : Math.pow(f, -0.55);     // marks grow, but slower than the map
+  if(Math.abs(s - nodeScale) < 0.015) return false;
+  nodeScale = s; placeNodes(); return true;
+}
+placeNodes();
+/* ── camera ────────────────────────────────────────────────────────── */
+let cam = {k:1,x:0,y:0}, W=0, H=0;
+function resize(){
+  const b = stage.getBoundingClientRect();
+  W = b.width; H = b.height;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  applyCam();
+}
+let pad = {l:0,r:0,b:0};
+function measurePads(){
+  const sb = stage.getBoundingClientRect();
+  const box = el => (!el || getComputedStyle(el).display === 'none') ? null : el.getBoundingClientRect();
+  const insp = box(document.querySelector('.insp'));
+  const stacked = sb.width < 820;
+  pad.l = 0;
+  pad.r = !stacked && insp ? insp.width + 28 : 0;
+  pad.b = stacked && insp  ? insp.height + 20 : 0;
+}
+function fitScale(){
+  const fw = Math.max(200, W - pad.l - pad.r), fh = Math.max(200, H - pad.b);
+  /* 2.30 leaves just enough ring outside the rim for the outer tag labels; the fit is
+     height-bound, so a bigger factor only buys empty gutters left and right. */
+  return Math.min(fw,fh) / (R*2.30);
+}
+/* horizontally the circle sits dead centre in the stage; only the stacked
+   layout's bottom panel shifts it, and then only upward */
+const camShift = () => [0, -pad.b/2];
+function applyCam(){
+  view.setAttribute('transform',`translate(${W/2 + cam.x} ${H/2 + cam.y}) scale(${cam.k})`);
+  gFrame.classList.toggle('hide', cam.k > fitScale()*2.1);
+  updateNodeScale();
+  positionTags(); zoomTags();
+}
+function resetCam(){ measurePads(); const [sx,sy] = camShift();
+  cam = {k:fitScale(), x:sx, y:sy}; applyCam(); }
+const toScreen = (x,y) => [W/2 + cam.x + x*cam.k, H/2 + cam.y + y*cam.k];
+const toWorld  = (sx,sy) => [(sx - W/2 - cam.x)/cam.k, (sy - H/2 - cam.y)/cam.k];
+
+let drag=null;
+svg.addEventListener('pointerdown', e => {
+  drag = {x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y,moved:0};
+  svg.setPointerCapture(e.pointerId); svg.classList.add('drag');
+});
+svg.addEventListener('pointermove', e => {
+  if(drag){
+    cam.x = drag.cx + (e.clientX-drag.x); cam.y = drag.cy + (e.clientY-drag.y);
+    drag.moved += Math.abs(e.movementX)+Math.abs(e.movementY);
+    applyCam(); hoverAt(null); return;
+  }
+  const b = svg.getBoundingClientRect();
+  hoverAt(e.clientX-b.left, e.clientY-b.top, e.clientX, e.clientY);
+});
+const endDrag = e => { if(!drag) return;
+  const click = drag.moved < 4; drag = null; svg.classList.remove('drag');
+  if(click){ const b=svg.getBoundingClientRect(); pick(e.clientX-b.left, e.clientY-b.top); } };
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', () => { drag=null; svg.classList.remove('drag'); });
+svg.addEventListener('pointerleave', () => hoverAt(null));
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const b = svg.getBoundingClientRect(), mx = e.clientX-b.left, my = e.clientY-b.top;
+  const [wx,wy] = toWorld(mx,my);
+  const k = Math.min(fitScale()*7, Math.max(fitScale()*0.55, cam.k * Math.exp(-e.deltaY*0.0016)));
+  cam.k = k; cam.x = mx - W/2 - wx*k; cam.y = my - H/2 - wy*k;
+  applyCam();
+},{passive:false});
+function zoomBy(f){
+  const k = Math.min(fitScale()*7, Math.max(fitScale()*0.55, cam.k*f));
+  cam.x *= k/cam.k; cam.y *= k/cam.k; cam.k = k; applyCam();
+}
+document.getElementById('zin').onclick  = () => zoomBy(1.45);
+document.getElementById('zout').onclick = () => zoomBy(1/1.45);
+document.getElementById('reset').onclick = () => { select(-1); resetCam(); };
+addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.activeElement !== q && pinned >= 0) select(-1);
+});
+
+/* ── persistent tags ───────────────────────────────────────────────── */
+const tagLayer = document.getElementById('tags');
+const tagIdx = [];
+for(let i=0;i<N;i++) if(!D.req[i].length) tagIdx.push(i);          // the six starts
+// landmarks: the costliest topics, kept apart around the ring so the map reads
+{
+  const by = [...Array(N).keys()].sort((a,b) => D.cost[b]-D.cost[a]);
+  const taken = [];
+  for(const i of by){
+    if(tagIdx.length >= 18) break;
+    if(tagIdx.includes(i)) continue;
+    if(taken.some(a => Math.abs(((D.ang[i]-a+540)%360)-180) < 14)) continue;
+    tagIdx.push(i); taken.push(D.ang[i]);
+  }
+}
+const tagEls = tagIdx.map(i => {
+  const s = document.createElement('span');
+  s.className = 'tag' + (D.req[i].length ? '' : ' root');
+  s.textContent = D.name[i];
+  tagLayer.append(s); return s;
+});
+/* Pinning does not add a label of its own: it only gives a topic priority in
+   whichever labelling pass is already running -- the permanent tags below the
+   zoom threshold, the zoom tags above it -- so a name that is already on
+   screen keeps the exact spot it had before the click. The one extra element
+   is for a pinned topic that is not one of the eighteen permanent tags. */
+const spare = document.createElement('span');
+spare.style.opacity = 0; tagLayer.append(spare);
+function positionTags(){
+  const placed = [];
+  const zoomed = cam.k > fitScale()*2.1;          // above this, zoomTags does the labelling
+  const faded = zoomed || R*2*cam.k < 470;
+  const order = [], els = [];
+  if(pinned >= 0){                                 // first in the queue: others yield to it
+    const k = tagIdx.indexOf(pinned);
+    order.push(pinned); els.push(k < 0 ? spare : tagEls[k]);
+  } else spare.style.opacity = 0;
+  tagIdx.forEach((i,n) => { if(i !== pinned){ order.push(i); els.push(tagEls[n]); } });
+  order.forEach((i,n) => {
+    const el = els[n], pin = i === pinned;
+    const [x,y] = XY(i), [sx,sy] = toScreen(x,y);
+    const a = aOf(i), off = (D.req[i].length ? 15 : 26) + sizeOf(i)*nodeScale*cam.k;
+    const lx = sx + Math.cos(a)*off, ly = sy + Math.sin(a)*off;
+    el.className = 'tag' + (D.req[i].length ? '' : ' root') + (pin ? ' pin' : '');
+    if(el.textContent !== D.name[i]) el.textContent = D.name[i];
+    const clash = placed.some(p => Math.abs(p[0]-lx) < 96 && Math.abs(p[1]-ly) < 15);
+    el.style.left = lx+'px'; el.style.top = ly+'px';
+    /* the pin ignores the too-small fade, which no other pass would cover for
+       it, but not the zoom handover, which would double the name */
+    el.style.opacity = (pin ? zoomed : (faded || clash)) ? 0 : '';
+    if(!clash) placed.push([lx,ly]);
+  });
+}
+
+const zoomPool = [];
+function zoomTags(){
+  let n = 0;
+  if(cam.k > fitScale()*2.1){
+    const cand = [];
+    for(let i=0;i<N;i++){
+          const [x,y] = XY(i), [sx,sy] = toScreen(x,y);
+      if(sx < -30 || sy < -20 || sx > W - (pad.r || 24) || sy > H - pad.b + 20) continue;
+      cand.push([i,sx,sy]);
+    }
+    cand.sort((a,b) => (b[0] === pinned) - (a[0] === pinned)      // the pin never loses a slot
+                        || (lit.size ? (lit.has(b[0])?1:0)-(lit.has(a[0])?1:0) : 0)
+                        || D.cost[b[0]] - D.cost[a[0]]);
+    const placed = [];
+    for(const [i,sx,sy] of cand){
+      if(n >= 46) break;
+      const lx = sx + 9 + sizeOf(i)*nodeScale*cam.k, ly = sy;
+      if(placed.some(p => Math.abs(p[0]-lx) < 112 && Math.abs(p[1]-ly) < 13)) continue;
+      placed.push([lx,ly]);
+      let el = zoomPool[n];
+      if(!el){ el = document.createElement('span'); tagLayer.append(el); zoomPool[n] = el; }
+      el.className = 'tag zt' + (lit.has(i) ? ' hot' : '') + (i === pinned ? ' pin' : '');
+      el.textContent = D.name[i];
+      el.style.cssText = `left:${lx}px;top:${ly}px;transform:translate(0,-50%)`;
+      n++;
+    }
+  }
+  for(let j = n; j < zoomPool.length; j++) zoomPool[j].style.opacity = 0;
+}
+
+/* ── hover + selection ─────────────────────────────────────────────── */
+const readout = document.getElementById('readout');
+let hover = -1, pinned = -1;
+function nearest(mx,my){
+  const [wx,wy] = toWorld(mx,my);
+  let best=-1, bd=Infinity;
+  for(let i=0;i<N;i++){
+      const [x,y] = XY(i), d = (x-wx)**2 + (y-wy)**2;
+    if(d < bd){ bd = d; best = i; }
+  }
+  const lim = (14/cam.k + sizeOf(best));
+  return bd <= lim*lim ? best : -1;
+}
+function hoverAt(mx,my,cx,cy){
+  const i = mx === null ? -1 : nearest(mx,my);
+  if(i !== hover){ hover = i; paint(); }
+  if(i < 0){ readout.classList.remove('on'); return; }
+  readout.classList.add('on');
+  readout.innerHTML = `<div class="nm">${esc(D.name[i])}</div>
+    <div class="mt">${KINDLABEL[D.kind[i]]}<br>
+    ${fmt(D.cost[i])} pts &middot; reachable at ${fmt(D.t[i])} pts</div>`;
+  const b = stage.getBoundingClientRect();
+  let lx = cx - b.left + 16, ly = cy - b.top + 16;
+  if(lx + 260 > b.width) lx = cx - b.left - 260;
+  if(ly + 90 > b.height) ly = cy - b.top - 90;
+  readout.style.left = lx+'px'; readout.style.top = ly+'px';
+}
+function pick(mx,my){ const i = nearest(mx,my); select(i === pinned ? -1 : i); }
+
+function select(i){
+  pinned = i; paint(); renderDetail(i);
+}
+
+/* Which side of a topic the plot lights up -- hovered or pinned alike.
+   The rail markup holds the default, so there is one place to change it. */
+const segbox = document.getElementById('scope');
+const segbtns = [...segbox.querySelectorAll('[data-scope]')];
+let scope = segbtns.find(b => b.getAttribute('aria-pressed') === 'true').dataset.scope;
+segbox.addEventListener('click', e => {
+  const b = e.target.closest('[data-scope]');
+  if(!b || b.dataset.scope === scope) return;
+  scope = b.dataset.scope;
+  for(const el of segbtns) el.setAttribute('aria-pressed', el === b);
+  paint();
+});
+
+let lit = new Set(), litEdges = new Set();
+function paint(){
+  const act = pinned >= 0 ? pinned : hover;
+  lit = new Set(); litEdges = new Set();
+  if(act >= 0){
+    const up   = scope === 'unl' ? [] : upstream(act);
+    const down = scope === 'req' ? [] : downstream(act);
+    lit = new Set([act, ...up, ...down]);
+    for(const e of edges) if(lit.has(e.p) && lit.has(e.c)) litEdges.add(e);
+  }
+  stage.classList.toggle('focus', act >= 0);
+  for(let i=0;i<N;i++) nodes[i].classList.toggle('lit', lit.has(i));
+  for(const e of edges) e.el.classList.toggle('lit', litEdges.has(e));
+  for(let i=0;i<N;i++) nodes[i].classList.toggle('pinned', i === pinned);
+  if(act >= 0){
+    const [x,y] = XY(act);
+    halo.setAttribute('cx',x); halo.setAttribute('cy',y);
+    halo.setAttribute('r', (sizeOf(act) + 7) * nodeScale);
+    halo.classList.add('on');
+  } else halo.classList.remove('on');
+  positionTags(); zoomTags();
+}
+
+/* ── detail panel ──────────────────────────────────────────────────── */
+const detail = document.getElementById('detail');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chip = i => `<button class="chip" data-go="${i}"><span class="dot ${BR(i)}"></span>${esc(D.name[i])}</button>`;
+
+function overview(){
+  detail.innerHTML = `<div class="empty">
+    <ul class="hints">
+      <li>Drag to pan</li>
+      <li>Scroll to zoom</li>
+      <li>Click a node to pin it &middot; click again to unpin</li>
+    </ul>
+  </div>`;
+}
+function renderDetail(i){
+  if(i < 0){ overview(); return; }
+  const path = critical(i);
+  const reqs = D.req[i], unl = kids[i];
+  detail.innerHTML = `
+    <div class="eyebrow">${esc(KINDLABEL[D.kind[i]])}</div>
+    <h2>${esc(D.name[i])}</h2>
+    <div class="id">${esc(D.id[i])}</div>
+    <div class="strip ${BR(i)}"></div>
+    <div class="sect"><h3>Requires <span>${reqs.length}</span></h3>
+      <div class="chips">${reqs.length ? reqs.map(chip).join('') : '<span class="id">Available from turn one</span>'}</div></div>
+    <div class="sect"><h3>Unlocks <span>${unl.length}</span></h3>
+      <div class="chips">${unl.length ? unl.map(chip).join('') : '<span class="id">Nothing further</span>'}</div></div>
+    <div class="sect"><h3>Research path</h3>
+      <ol class="chain">${path.map((p,n) => `<li class="${p===i?'here':''}">
+        <button data-go="${p}">${esc(D.name[p])}</button></li>`).join('')}</ol></div>`;
+}
+detail.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if(b){ const i = +b.dataset.go; select(i); centreOn(i); return; }
+});
+function centreOn(i){
+  const [x,y] = XY(i);
+  const k = Math.max(cam.k, fitScale()*1.9);
+  cam.k = k; cam.x = -x*k; cam.y = -y*k; applyCam();
+}
+
+/* ── theme toggle ──────────────────────────────────────────────────── */
+const thm = document.getElementById('thm');
+const osDark = matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => (document.documentElement.dataset.theme || (osDark.matches ? 'dark' : 'light')) === 'dark';
+function labelTheme(){
+  const to = isDark() ? 'light' : 'dark';
+  thm.setAttribute('aria-label', 'Switch to ' + to + ' mode');
+  thm.title = 'Switch to ' + to + ' mode';
+}
+thm.addEventListener('click', () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try{ localStorage.setItem('rw-theme', next); }catch(e){}
+  labelTheme();
+});
+/* while no explicit choice is stored the page still follows the OS */
+osDark.addEventListener('change', labelTheme);
+labelTheme();
+
+/* ── finder ────────────────────────────────────────────────────────── */
+const q = document.getElementById('q'), results = document.getElementById('results');
+let cursor = -1;
+/* group the finder by reach; unlike the rings, these bands carry real numbers */
+const bandOf = i => { const v = ringVals.cost; let b = 0;
+  while(b < v.length-1 && D.t[i] > v[b].v) b++; return b; };
+const bandLabel = b => b === 0 ? `Up to ${ringVals.cost[0].l} pts`
+                                : `${ringVals.cost[b-1].l} \u2013 ${ringVals.cost[b].l} pts`;
+function openList(list){
+  cursor = -1;
+  if(!list.length){ results.innerHTML = '<li><div class="grp">No match</div></li>'; }
+  else{
+    let html = '', lastBand = -1;
+    for(const i of list){
+      const band = bandOf(i);
+      if(band !== lastBand){ lastBand = band;
+        html += `<li role="presentation"><div class="grp">${esc(bandLabel(band))}</div></li>`; }
+      html += `<li role="presentation"><button role="option" data-go="${i}">
+        <span class="dot ${BR(i)}"></span>${esc(D.name[i])}</button></li>`;
+    }
+    results.innerHTML = html;
+  }
+  results.classList.add('open'); q.setAttribute('aria-expanded','true');
+}
+function closeList(){ results.classList.remove('open'); q.setAttribute('aria-expanded','false'); }
+function search(){
+  const s = q.value.trim().toLowerCase();
+  const all = [...Array(N).keys()].sort((a,b) => D.t[a]-D.t[b]);
+  openList(s ? all.filter(i => D.name[i].toLowerCase().includes(s) ||
+                               D.id[i].toLowerCase().includes(s)).slice(0,60)
+             : all);
+}
+q.addEventListener('focus', search);
+q.addEventListener('input', search);
+q.addEventListener('keydown', e => {
+  const btns = [...results.querySelectorAll('button')];
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    cursor = Math.max(0, Math.min(btns.length-1, cursor + (e.key==='ArrowDown'?1:-1)));
+    btns.forEach((b,n) => b.classList.toggle('cur', n===cursor));
+    btns[cursor]?.scrollIntoView({block:'nearest'});
+  } else if(e.key === 'Enter'){
+    const b = btns[cursor] || btns[0];
+    if(b){ const i = +b.dataset.go; select(i); centreOn(i); closeList(); q.blur(); }
+  } else if(e.key === 'Escape'){ closeList(); q.blur(); }
+});
+results.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if(b){ const i = +b.dataset.go; select(i); centreOn(i); closeList(); }
+});
+document.addEventListener('pointerdown', e => {
+  if(!e.target.closest('.finder')) closeList();
+});
+
+/* ── boot ──────────────────────────────────────────────────────────── */
+let wasStacked = null;
+addEventListener('resize', () => {
+  const stacked = W < 820;
+  resize(); measurePads();
+  if(stacked !== wasStacked){ wasStacked = stacked; resetCam(); }   // layout flipped: refit
+});
+resize(); resetCam(); wasStacked = W < 820; overview();
+
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!reduce){
+  gEdge.style.opacity = 0; gNode.style.opacity = 0;
+  const t0 = performance.now(), dur = 1150;
+  const order = [...Array(N).keys()].sort((a,b) => D.ang[a]-D.ang[b]);
+  let cut = 0;
+  for(const i of order) nodes[i].style.opacity = 0;
+  gNode.style.opacity = 1;
+  (function sweepStep(now){
+    const t = Math.min(1,(now-t0)/dur);
+    const a = -90 + t*372;
+    const rad = a*Math.PI/180, w = 26*Math.PI/180;
+    sweep.setAttribute('d',
+      `M0 0L${R*1.05*Math.cos(rad-w)} ${R*1.05*Math.sin(rad-w)}A${R*1.05} ${R*1.05} 0 0 1 ${R*1.05*Math.cos(rad)} ${R*1.05*Math.sin(rad)}Z`);
+    sweep.setAttribute('transform',`translate(${W/2+cam.x} ${H/2+cam.y}) scale(${cam.k})`);
+    sweep.style.opacity = t < .92 ? .55*Math.min(1,t*6) : .55*(1-(t-.92)/.08);
+    while(cut < order.length && D.ang[order[cut]] <= t*372) nodes[order[cut++]].style.opacity = 1;
+    if(t < 1) requestAnimationFrame(sweepStep);
+    else{
+      sweep.style.opacity = 0;
+      for(const i of order) nodes[i].style.opacity = '';
+      gEdge.style.transition = 'opacity .55s ease'; gEdge.style.opacity = 1;
+    }
+  })(t0);
+}
+</script>
