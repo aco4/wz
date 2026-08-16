@@ -1,3 +1,4 @@
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Warzone 2100 Research Tree</title>
 <style>
 @font-face{font-family:'UbuntuCond';src:url(data:font/woff2;base64,{{UBC}}) format('woff2');font-weight:400;font-style:normal;font-display:block}
@@ -72,6 +73,10 @@ body{
   margin:0;background:var(--ground);color:var(--ink);
   font-family:'LatoX',system-ui,sans-serif;font-size:14px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
+  /* the whole app is a fixed viewport; nothing here should rubber-band or
+     pull-to-refresh when a gesture runs past the end of a scroller */
+  overscroll-behavior:none;
+  -webkit-text-size-adjust:100%;
 }
 .eyebrow{
   font-family:'UbuntuCond',system-ui,sans-serif;text-transform:uppercase;
@@ -267,17 +272,60 @@ body{
   .scope .rl{display:none}                    /* the group keeps its aria label */
 }
 @media (max-width:820px){
-  .rail{gap:8px;padding:8px 10px;overflow:hidden}
-  .mark{margin-right:0;flex:1 1 100%}
-  .mark h1{font-size:15px;letter-spacing:.15em}
+  /* The rail wraps instead: the wordmark takes the first row and the controls
+     the second, which is cheaper in height than shrinking every control until
+     they all fit across a phone. No overflow:hidden -- the finder's results
+     hang out of the rail, and a clipped dropdown is a search box that does
+     nothing. */
+  .rail{
+    gap:6px 10px;
+    padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right))
+            8px max(10px,env(safe-area-inset-left));
+  }
+  /* the theme toggle rides up next to the wordmark, which has the room for it:
+     that leaves the whole of the second row to the scope and the finder, and
+     keeps the rail at two rows down to a 320px screen */
+  .mark{margin-right:0;flex:1 1 auto;min-width:0;order:-2}
+  .mark h1{font-size:15px;letter-spacing:.15em;overflow:hidden;text-overflow:ellipsis}
+  .thm{order:-1}
   .btn{padding:5px 8px}
   .seg button{font-size:10px;padding:5px 7px}
-  .finder{flex:1 1 96px;min-width:0}
+  .finder{flex:1 1 90px;min-width:0}
   .finder input{width:100%}
-  .results{width:min(320px,88vw)}
-  .insp{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:38vh}
-  .insp .body{padding:12px}
-  .zoomer{left:8px;top:8px}
+  .results{width:min(320px,92vw);max-height:min(44vh,420px)}
+  .insp{width:250px}
+  .insp .body{padding:12px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .zoomer{left:max(8px,env(safe-area-inset-left));top:8px}
+}
+/* Stacked: the detail panel becomes a sheet along the bottom edge and the plot
+   is fitted above it by measurePads(). Only where the stage is taller than it
+   is wide -- the same phone on its side has height to spare nowhere, and would
+   rather give the panel a column than a row. Kept in step with the JS by
+   matchMedia() on this exact query, not by a second guess at the width. */
+@media (max-width:820px) and (orientation:portrait){
+  .insp{
+    left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));
+    top:auto;bottom:max(8px,env(safe-area-inset-bottom));
+    width:auto;max-height:min(45%,340px);
+  }
+}
+/* touch targets: a fingertip is blunter than a cursor, so the controls grow by
+   padding -- the type sizes stay where the design put them */
+@media (pointer:coarse){
+  .seg button{padding:10px 12px}
+  .thm{width:38px;height:38px}
+  /* 16px is the threshold below which iOS Safari zooms the page in on focus */
+  .finder input{padding:9px;font-size:16px}
+  .results button{padding:9px 8px;min-height:38px;align-items:center}
+  .zoomer{gap:8px}
+  .zoomer .btn{width:42px;height:40px;font-size:16px}
+  .chip{padding:7px 9px}
+  .chain li{padding:5px 0}
+}
+/* the cursor readout has no cursor to follow on a touch screen; the detail
+   sheet is the readout there */
+@media (hover:none){
+  .readout{display:none}
 }
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:0s!important;transition-duration:0s!important}
@@ -469,15 +517,27 @@ function resize(){
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
   applyCam();
 }
-let pad = {l:0,r:0,b:0};
+let pad = {l:0,r:0,b:0,panel:null};
+/* the one place that decides whether the detail panel is a column beside the
+   plot or a sheet under it; the stylesheet asks the identical question */
+const stackedMQ = matchMedia('(max-width:820px) and (orientation:portrait)');
 function measurePads(){
   const sb = stage.getBoundingClientRect();
   const box = el => (!el || getComputedStyle(el).display === 'none') ? null : el.getBoundingClientRect();
   const insp = box(document.querySelector('.insp'));
-  const stacked = sb.width < 820;
+  const stacked = stackedMQ.matches;
   pad.l = 0;
   pad.r = !stacked && insp ? insp.width + 28 : 0;
   pad.b = stacked && insp  ? insp.height + 20 : 0;
+  /* where the panel actually sits, in stage coordinates: the fit reserves a
+     whole column or row for it, but a name only has to dodge the box itself */
+  pad.panel = insp ? {l:insp.left - sb.left, r:insp.right - sb.left,
+                      t:insp.top - sb.top,   b:insp.bottom - sb.top} : null;
+}
+/* would a name drawn from x0 to x1 at y disappear under the detail panel? */
+function underPanel(x0,x1,y){
+  const p = pad.panel;
+  return !!p && x1 > p.l - 3 && x0 < p.r + 3 && y > p.t - 7 && y < p.b + 7;
 }
 function fitScale(){
   const fw = Math.max(200, W - pad.l - pad.r), fh = Math.max(200, H - pad.b);
@@ -499,36 +559,83 @@ function resetCam(){ measurePads(); const [sx,sy] = camShift();
 const toScreen = (x,y) => [W/2 + cam.x + x*cam.k, H/2 + cam.y + y*cam.k];
 const toWorld  = (sx,sy) => [(sx - W/2 - cam.x)/cam.k, (sy - H/2 - cam.y)/cam.k];
 
-let drag=null;
+/* how far out and in the map may be taken, wheel, pinch and buttons alike */
+const clampK = k => Math.min(fitScale()*7, Math.max(fitScale()*0.55, k));
+
+/* One pointer pans, two pinch. Both read the same map of live pointers, so a
+   finger landing or lifting mid-gesture reseats the gesture from where things
+   now stand instead of snapping the map to a stale anchor. */
+const live = new Map();       // pointerId -> last client position
+let gest = null;              // anchor for the gesture in flight
+let travel = 0;               // pointer distance since it went down: tap or drag
+let pinching = false;         // a second finger was down at some point: no tap
+
+/* (re)anchor on whatever is touching the plot right now */
+function seat(){
+  const pts = [...live.values()].slice(0,2);
+  if(pts.length === 1){
+    gest = {n:1, sx:pts[0].x, sy:pts[0].y, cx:cam.x, cy:cam.y};
+  } else if(pts.length === 2){
+    const b = svg.getBoundingClientRect();
+    const mx = (pts[0].x+pts[1].x)/2 - b.left, my = (pts[0].y+pts[1].y)/2 - b.top;
+    const [wx,wy] = toWorld(mx,my);
+    gest = {n:2, d:Math.max(1,Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y)), k:cam.k, wx, wy};
+  } else gest = null;
+}
 svg.addEventListener('pointerdown', e => {
-  drag = {x:e.clientX,y:e.clientY,cx:cam.x,cy:cam.y,moved:0};
-  svg.setPointerCapture(e.pointerId); svg.classList.add('drag');
+  if(live.size >= 2) return;                        // a third finger sits it out
+  if(live.size === 0){ travel = 0; pinching = false; }
+  else pinching = true;
+  live.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  /* a pointer that is already gone cannot be captured, and the gesture is
+     none the worse for it */
+  try{ svg.setPointerCapture(e.pointerId); }catch(err){}
+  seat(); svg.classList.add('drag');
 });
 svg.addEventListener('pointermove', e => {
-  if(drag){
-    cam.x = drag.cx + (e.clientX-drag.x); cam.y = drag.cy + (e.clientY-drag.y);
-    drag.moved += Math.abs(e.movementX)+Math.abs(e.movementY);
-    applyCam(); hoverAt(null); return;
+  const p = live.get(e.pointerId);
+  if(!p){                                            /* nothing down: hover */
+    if(e.pointerType === 'touch') return;            /* a stray finger, not a cursor */
+    const b = svg.getBoundingClientRect();
+    hoverAt(e.clientX-b.left, e.clientY-b.top, e.clientX, e.clientY);
+    return;
   }
-  const b = svg.getBoundingClientRect();
-  hoverAt(e.clientX-b.left, e.clientY-b.top, e.clientX, e.clientY);
+  travel += Math.abs(e.clientX-p.x) + Math.abs(e.clientY-p.y);
+  p.x = e.clientX; p.y = e.clientY;
+  if(!gest) return;
+  if(gest.n === 1){
+    cam.x = gest.cx + (e.clientX-gest.sx); cam.y = gest.cy + (e.clientY-gest.sy);
+  } else {
+    /* the world point the two fingers straddled stays under their midpoint,
+       which folds the pinch's pan and its zoom into the one placement */
+    const pts = [...live.values()].slice(0,2), b = svg.getBoundingClientRect();
+    const mx = (pts[0].x+pts[1].x)/2 - b.left, my = (pts[0].y+pts[1].y)/2 - b.top;
+    const k = clampK(gest.k * Math.max(1,Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y)) / gest.d);
+    cam.k = k; cam.x = mx - W/2 - gest.wx*k; cam.y = my - H/2 - gest.wy*k;
+  }
+  applyCam(); hoverAt(null);
 });
-const endDrag = e => { if(!drag) return;
-  const click = drag.moved < 4; drag = null; svg.classList.remove('drag');
-  if(click){ const b=svg.getBoundingClientRect(); pick(e.clientX-b.left, e.clientY-b.top); } };
-svg.addEventListener('pointerup', endDrag);
-svg.addEventListener('pointercancel', () => { drag=null; svg.classList.remove('drag'); });
+function endPointer(e, cancelled){
+  if(!live.delete(e.pointerId)) return;
+  const tap = !cancelled && !pinching && !live.size && travel < (e.pointerType === 'touch' ? 12 : 4);
+  seat();                                            // a surviving finger takes the pan over
+  if(!live.size) svg.classList.remove('drag');
+  if(tap){ const b = svg.getBoundingClientRect();
+           pick(e.clientX-b.left, e.clientY-b.top, e.pointerType === 'touch' ? 26 : 14); }
+}
+svg.addEventListener('pointerup', e => endPointer(e,false));
+svg.addEventListener('pointercancel', e => endPointer(e,true));
 svg.addEventListener('pointerleave', () => hoverAt(null));
 svg.addEventListener('wheel', e => {
   e.preventDefault();
   const b = svg.getBoundingClientRect(), mx = e.clientX-b.left, my = e.clientY-b.top;
   const [wx,wy] = toWorld(mx,my);
-  const k = Math.min(fitScale()*7, Math.max(fitScale()*0.55, cam.k * Math.exp(-e.deltaY*0.0016)));
+  const k = clampK(cam.k * Math.exp(-e.deltaY*0.0016));
   cam.k = k; cam.x = mx - W/2 - wx*k; cam.y = my - H/2 - wy*k;
   applyCam();
 },{passive:false});
 function zoomBy(f){
-  const k = Math.min(fitScale()*7, Math.max(fitScale()*0.55, cam.k*f));
+  const k = clampK(cam.k*f);
   cam.x *= k/cam.k; cam.y *= k/cam.k; cam.k = k; applyCam();
 }
 document.getElementById('zin').onclick  = () => zoomBy(1.45);
@@ -569,7 +676,11 @@ spare.style.opacity = 0; tagLayer.append(spare);
 function positionTags(){
   const placed = [];
   const zoomed = cam.k > fitScale()*2.1;          // above this, zoomTags does the labelling
-  const faded = zoomed || R*2*cam.k < 470;
+  /* below this the map reads as a shape and the names only crowd it -- but on a
+     phone the fitted map is never 470px across, and a map that opens with no
+     names on it at all is worse than a few, so the threshold gives way to the
+     stage when the stage is the smaller of the two */
+  const faded = zoomed || R*2*cam.k < Math.min(470, Math.min(W,H)*0.86);
   const order = [], els = [];
   if(pinned >= 0){                                 // first in the queue: others yield to it
     const k = tagIdx.indexOf(pinned);
@@ -584,11 +695,17 @@ function positionTags(){
     el.className = 'tag' + (D.req[i].length ? '' : ' root') + (pin ? ' pin' : '');
     if(el.textContent !== D.name[i]) el.textContent = D.name[i];
     const clash = placed.some(p => Math.abs(p[0]-lx) < 96 && Math.abs(p[1]-ly) < 15);
+    /* a name that would run off the side of a narrow stage is dropped rather
+       than half-drawn; 2.8px a character is close enough to the condensed face
+       to decide it without measuring one every frame */
+    const half = 4 + D.name[i].length*2.8;
+    const clipped = lx - half < 2 || lx + half > W - 2 ||
+                    underPanel(lx-half, lx+half, ly);
     el.style.left = lx+'px'; el.style.top = ly+'px';
     /* the pin ignores the too-small fade, which no other pass would cover for
        it, but not the zoom handover, which would double the name */
-    el.style.opacity = (pin ? zoomed : (faded || clash)) ? 0 : '';
-    if(!clash) placed.push([lx,ly]);
+    el.style.opacity = (pin ? zoomed : (faded || clash || clipped)) ? 0 : '';
+    if(!clash && !clipped) placed.push([lx,ly]);
   });
 }
 
@@ -609,6 +726,11 @@ function zoomTags(){
     for(const [i,sx,sy] of cand){
       if(n >= 46) break;
       const lx = sx + 9 + sizeOf(i)*nodeScale*cam.k, ly = sy;
+      /* these names hang to the right of their node, so a long one near the
+         right edge -- or reaching under the panel -- would be cut in half; it
+         is left out and its slot goes to a name that fits */
+      const rx = lx + 5.6*D.name[i].length;
+      if(rx > W - 4 || underPanel(lx,rx,ly)) continue;
       if(placed.some(p => Math.abs(p[0]-lx) < 112 && Math.abs(p[1]-ly) < 13)) continue;
       placed.push([lx,ly]);
       let el = zoomPool[n];
@@ -625,14 +747,16 @@ function zoomTags(){
 /* ── hover + selection ─────────────────────────────────────────────── */
 const readout = document.getElementById('readout');
 let hover = -1, pinned = -1;
-function nearest(mx,my){
+/* reach is in screen pixels, so it holds at any zoom; a fingertip is given
+   more of it than a cursor */
+function nearest(mx,my,reach=14){
   const [wx,wy] = toWorld(mx,my);
   let best=-1, bd=Infinity;
   for(let i=0;i<N;i++){
       const [x,y] = XY(i), d = (x-wx)**2 + (y-wy)**2;
     if(d < bd){ bd = d; best = i; }
   }
-  const lim = (14/cam.k + sizeOf(best));
+  const lim = (reach/cam.k + sizeOf(best));
   return bd <= lim*lim ? best : -1;
 }
 function hoverAt(mx,my,cx,cy){
@@ -649,10 +773,13 @@ function hoverAt(mx,my,cx,cy){
   if(ly + 90 > b.height) ly = cy - b.top - 90;
   readout.style.left = lx+'px'; readout.style.top = ly+'px';
 }
-function pick(mx,my){ const i = nearest(mx,my); select(i === pinned ? -1 : i); }
+function pick(mx,my,reach){ const i = nearest(mx,my,reach); select(i === pinned ? -1 : i); }
 
 function select(i){
   pinned = i; paint(); renderDetail(i);
+  /* the panel has just been refilled and is a different height for it; the
+     names dodge its box, so they get placed again against the new one */
+  measurePads(); positionTags(); zoomTags();
 }
 
 /* Which side of a topic the plot lights up -- hovered or pinned alike.
@@ -696,15 +823,19 @@ const detail = document.getElementById('detail');
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const chip = i => `<button class="chip" data-go="${i}"><span class="dot ${BR(i)}"></span>${esc(D.name[i])}</button>`;
 
+/* the hints name the gesture the reader actually has to hand */
+const coarse = matchMedia('(pointer:coarse)');
 function overview(){
+  const touch = coarse.matches;
   detail.innerHTML = `<div class="empty">
     <ul class="hints">
       <li>Drag to pan</li>
-      <li>Scroll to zoom</li>
-      <li>Click a node to pin it &middot; click again to unpin</li>
+      <li>${touch ? 'Pinch' : 'Scroll'} to zoom</li>
+      <li>${touch ? 'Tap' : 'Click'} a node to pin it &middot; ${touch ? 'tap' : 'click'} again to unpin</li>
     </ul>
   </div>`;
 }
+coarse.addEventListener('change', () => { if(pinned < 0) overview(); });
 function renderDetail(i){
   if(i < 0){ overview(); return; }
   const path = critical(i);
@@ -729,7 +860,11 @@ detail.addEventListener('click', e => {
 function centreOn(i){
   const [x,y] = XY(i);
   const k = Math.max(cam.k, fitScale()*1.9);
-  cam.k = k; cam.x = -x*k; cam.y = -y*k; applyCam();
+  measurePads();
+  /* centred in the plot the reader can see: with the detail panel over one
+     side of the stage, or a sheet across the foot of it, that is not the
+     centre of the stage */
+  cam.k = k; cam.x = -x*k - pad.r/2; cam.y = -y*k - pad.b/2; applyCam();
 }
 
 /* ── theme toggle ──────────────────────────────────────────────────── */
@@ -799,7 +934,9 @@ q.addEventListener('keydown', e => {
 });
 results.addEventListener('click', e => {
   const b = e.target.closest('[data-go]');
-  if(b){ const i = +b.dataset.go; select(i); centreOn(i); closeList(); }
+  /* blurs as the Enter path does: on a phone the field is holding up a
+     keyboard over the half of the map the reader just asked to see */
+  if(b){ const i = +b.dataset.go; select(i); centreOn(i); closeList(); q.blur(); }
 });
 document.addEventListener('pointerdown', e => {
   if(!e.target.closest('.finder')) closeList();
@@ -808,11 +945,19 @@ document.addEventListener('pointerdown', e => {
 /* ── boot ──────────────────────────────────────────────────────────── */
 let wasStacked = null;
 addEventListener('resize', () => {
-  const stacked = W < 820;
   resize(); measurePads();
+  const stacked = stackedMQ.matches;
   if(stacked !== wasStacked){ wasStacked = stacked; resetCam(); }   // layout flipped: refit
 });
-resize(); resetCam(); wasStacked = W < 820; overview();
+/* Turning a phone on its side changes everything about the fit, and both
+   orientations are below the stacked breakpoint, so the check above would not
+   refit on its own. Waits a frame: the event can land before the new size does. */
+addEventListener('orientationchange', () => {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    resize(); resetCam(); wasStacked = stackedMQ.matches;
+  }));
+});
+resize(); resetCam(); wasStacked = stackedMQ.matches; overview();
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(!reduce){

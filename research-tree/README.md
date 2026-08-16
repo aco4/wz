@@ -5,10 +5,10 @@ and every prerequisite between them, as one circular graph.
 
 ```
 python3 build/layout.py     # research.json -> build/techdata.json
-python3 build/build.py      # techdata.json + fonts -> research-web.html
+python3 build/build.py      # techdata.json + fonts -> index.html
 ```
 
-`research-web.html` is the whole deliverable: one file, fonts inlined, no
+`index.html` is the whole deliverable: one file, fonts inlined, no
 network requests. Open it directly.
 
 Nothing in the pipeline knows the name of a research topic. Every grouping,
@@ -36,6 +36,12 @@ far apart** — an edge the spanning tree could not carry.
 **Colour separates neighbouring spokes by eye.** It is not decoration — the
 groups are derived from what each topic *does* (see below) — but it is not a
 scale either, and nothing is encoded by which of the six hues a group drew.
+
+**On a phone** the detail panel becomes a sheet along the bottom edge and the
+plot is fitted above it. One finger pans, two pinch, a tap pins a topic and a
+second tap unpins it. There is no cursor readout, because there is no cursor:
+the sheet is the readout. Names are dropped rather than drawn half off the
+side of a narrow stage, so a phone shows fewer of them than a desktop does.
 
 ---
 
@@ -112,8 +118,8 @@ before any statement is made about its quality.
 python3 build/layout.py && python3 build/build.py
 "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu \
   --window-size=1700,1150 --force-prefers-reduced-motion --virtual-time-budget=9000 \
-  --screenshot="C:\Users\antho\repos\techtree\build\shot.png" \
-  "C:\Users\antho\repos\techtree\research-web.html"
+  --screenshot="C:\Users\antho\repos\wz\research-tree\build\shot.png" \
+  "C:\Users\antho\repos\wz\research-tree\index.html"
 ```
 
 `--force-prefers-reduced-motion` is required: the page has an intro sweep and
@@ -202,10 +208,10 @@ small numbers as "structurally too close" rather than as precise figures.
 |---|---|
 | `research.json` | input; the game's research data |
 | `build/layout.py` | `Graph`, `Affinity`, `radii`, `angles`, `branches` → `techdata.json` |
-| `build/build.py` | inlines `techdata.json` + fonts into `research-web.html` |
+| `build/build.py` | inlines `techdata.json` + fonts into `index.html` |
 | `build/template.html` | the page: palette tokens, SVG renderer, focus, keyboard nav |
 | `build/layout_legacy.py` | dead. Kept for its hand-authored 16-family taxonomy, which is the validation set |
-| `research-web.html` | the build output |
+| `index.html` | the build output |
 
 ## Ideas considered and not taken
 
