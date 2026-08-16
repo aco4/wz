@@ -562,6 +562,13 @@ const toWorld  = (sx,sy) => [(sx - W/2 - cam.x)/cam.k, (sy - H/2 - cam.y)/cam.k]
 /* how far out and in the map may be taken, wheel, pinch and buttons alike */
 const clampK = k => Math.min(fitScale()*7, Math.max(fitScale()*0.55, k));
 
+/* Whether the reader has moved the camera themselves. Until they have, the
+   view is still the page's own opening fit and the page is free to take it
+   again when the stage changes size under it -- see the observer at the foot
+   of the file. Pinning a topic is not moving the camera. */
+let touched = false;
+const moved = () => { touched = true; };
+
 /* One pointer pans, two pinch. Both read the same map of live pointers, so a
    finger landing or lifting mid-gesture reseats the gesture from where things
    now stand instead of snapping the map to a stale anchor. */
@@ -603,6 +610,7 @@ svg.addEventListener('pointermove', e => {
   travel += Math.abs(e.clientX-p.x) + Math.abs(e.clientY-p.y);
   p.x = e.clientX; p.y = e.clientY;
   if(!gest) return;
+  moved();
   if(gest.n === 1){
     cam.x = gest.cx + (e.clientX-gest.sx); cam.y = gest.cy + (e.clientY-gest.sy);
   } else {
@@ -632,15 +640,15 @@ svg.addEventListener('wheel', e => {
   const [wx,wy] = toWorld(mx,my);
   const k = clampK(cam.k * Math.exp(-e.deltaY*0.0016));
   cam.k = k; cam.x = mx - W/2 - wx*k; cam.y = my - H/2 - wy*k;
-  applyCam();
+  moved(); applyCam();
 },{passive:false});
 function zoomBy(f){
   const k = clampK(cam.k*f);
-  cam.x *= k/cam.k; cam.y *= k/cam.k; cam.k = k; applyCam();
+  cam.x *= k/cam.k; cam.y *= k/cam.k; cam.k = k; moved(); applyCam();
 }
 document.getElementById('zin').onclick  = () => zoomBy(1.45);
 document.getElementById('zout').onclick = () => zoomBy(1/1.45);
-document.getElementById('reset').onclick = () => { select(-1); resetCam(); };
+document.getElementById('reset').onclick = () => { touched = false; select(-1); resetCam(); };
 addEventListener('keydown', e => {
   if(e.key === 'Escape' && document.activeElement !== q && pinned >= 0) select(-1);
 });
@@ -864,7 +872,7 @@ function centreOn(i){
   /* centred in the plot the reader can see: with the detail panel over one
      side of the stage, or a sheet across the foot of it, that is not the
      centre of the stage */
-  cam.k = k; cam.x = -x*k - pad.r/2; cam.y = -y*k - pad.b/2; applyCam();
+  cam.k = k; cam.x = -x*k - pad.r/2; cam.y = -y*k - pad.b/2; moved(); applyCam();
 }
 
 /* ── theme toggle ──────────────────────────────────────────────────── */
@@ -949,6 +957,16 @@ addEventListener('resize', () => {
   const stacked = stackedMQ.matches;
   if(stacked !== wasStacked){ wasStacked = stacked; resetCam(); }   // layout flipped: refit
 });
+/* The stage does not only change size when the window does: a phone's address
+   bar retracts, a desktop window is restored to a size it was not opened at,
+   the panel settles. None of that is the reader moving the map, so while they
+   have not moved it themselves the opening fit is simply taken again -- which
+   is what pressing Reset view was doing for them. */
+function stageChanged(){
+  resize(); measurePads();
+  if(!touched) resetCam();
+}
+new ResizeObserver(stageChanged).observe(stage);
 /* Turning a phone on its side changes everything about the fit, and both
    orientations are below the stacked breakpoint, so the check above would not
    refit on its own. Waits a frame: the event can land before the new size does. */
@@ -957,7 +975,9 @@ addEventListener('orientationchange', () => {
     resize(); resetCam(); wasStacked = stackedMQ.matches;
   }));
 });
-resize(); resetCam(); wasStacked = stackedMQ.matches; overview();
+/* the panel is filled first: the fit reserves room for it, and an empty one
+   measures 46px where the hints measure 108px */
+overview(); resize(); resetCam(); wasStacked = stackedMQ.matches;
 
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(!reduce){
