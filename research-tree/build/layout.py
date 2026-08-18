@@ -62,11 +62,19 @@ class Graph:
 
     def __init__(self, d):
         self.d = d
-        self.ids = ids = sorted(d)
+        ids = sorted(d)
+        req = {k: [r for r in d[k].get('requiredResearch', []) if r in d and r != k]
+               for k in ids}
+        # A topic with no prerequisites and nothing depending on it is not part
+        # of the tree -- there is no line the chart could draw to it. Drop those
+        # before anything measures the graph, so they neither claim a wedge nor
+        # shift the quantiles the radial scale is built on.
+        linked = {r for k in ids for r in req[k]} | {k for k in ids if req[k]}
+        self.isolated = [k for k in ids if k not in linked]
+        self.ids = ids = [k for k in ids if k in linked]
         self.idx = {k: i for i, k in enumerate(ids)}
         self.N = len(ids)
-        self.req = {k: [r for r in d[k].get('requiredResearch', []) if r in d and r != k]
-                    for k in ids}
+        self.req = {k: req[k] for k in ids}
         self.dropped = sum(len(d[k].get('requiredResearch', [])) - len(self.req[k]) for k in ids)
         self._break_cycles()
         self.kids = collections.defaultdict(list)
@@ -379,6 +387,7 @@ def main():
     g = Graph(d)
     ids, idx = g.ids, g.idx
     print(f'{g.N} topics, {len(g.edges)} prerequisite edges'
+          + (f', {len(g.isolated)} unconnected topics dropped' if g.isolated else '')
           + (f', {g.dropped} dangling refs ignored' if g.dropped else '')
           + (f', {len(g.cut)} cycle edges cut' if g.cut else ''))
 
